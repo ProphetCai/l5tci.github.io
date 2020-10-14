@@ -176,7 +176,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-10-13 18:05:07" itemprop="dateModified" datetime="2020-10-13T18:05:07+08:00">2020-10-13</time>
+                <time title="修改时间：2020-10-14 17:56:44" itemprop="dateModified" datetime="2020-10-14T17:56:44+08:00">2020-10-14</time>
               </span>
 
           
@@ -197,7 +197,7 @@
 <p>看的尚硅谷周阳老师JVM的学习笔记，某些地方参考了<a herf="https://www.jianshu.com/p/9e6841a895b4">简书老哥@Be_The_Minority的文章</a></p>
 </blockquote>
 <hr>
-<h1 id="JVM"><a href="#JVM" class="headerlink" title="JVM"></a>JVM</h1><h2 id="1、JVM的体系结构"><a href="#1、JVM的体系结构" class="headerlink" title="1、JVM的体系结构"></a>1、JVM的体系结构</h2><p><img src="/2020/10/12/JVM/2020-10-09-10-11-21.png"><br>&emsp;&emsp;JVM是运行在操作系统之上的，与硬件没有直接的交互</p>
+<h1 id="JVM"><a href="#JVM" class="headerlink" title="JVM"></a>JVM</h1><h2 id="JVM的体系结构"><a href="#JVM的体系结构" class="headerlink" title="JVM的体系结构"></a>JVM的体系结构</h2><p><img src="/2020/10/12/JVM/2020-10-09-10-11-21.png"><br>&emsp;&emsp;JVM是运行在操作系统之上的，与硬件没有直接的交互</p>
 <p><img src="/2020/10/12/JVM/2020-10-09-13-44-09.png"><br>&emsp;&emsp;<strong>注意</strong>，运行时数据区中：灰色代表<strong>线程私有、内存空间占得少，几乎不存在GC</strong>；亮色代表<strong>所有数据共享，存在垃圾回收</strong></p>
 <h2 id="类加载器ClassLoader"><a href="#类加载器ClassLoader" class="headerlink" title="类加载器ClassLoader"></a>类加载器ClassLoader</h2><p>&emsp;&emsp;加载class文件，class文件<strong>开头</strong>有<strong>特定的文件标识（cafe babe）</strong>，将class文件字节码内容加载到内存中，并将这些内容转换成<strong>方法区</strong>（放类的描述信息 <del>（模板）</del> 的地方）中的<strong>运行时数据结构</strong>。<br>&emsp;&emsp;ClassLoader<strong>只</strong>负责class文件的<strong>加载</strong>，至于是否可以运行由Execution Engine决定。<br><img src="/2020/10/12/JVM/2020-10-09-13-55-08.png">  </p>
 <h3 id="类加载器分类"><a href="#类加载器分类" class="headerlink" title="类加载器分类"></a>类加载器分类</h3><ul>
@@ -274,9 +274,73 @@
 <li>物理上分为两部分：新生+养老</li>
 </ul>
 </blockquote>
+<ul>
+<li>new一个类时，其实是new在新生区的伊甸园区，然后往下流，流到养老区，但<strong>没有到元空间</strong><br><img src="/2020/10/12/JVM/2020-10-14-09-48-21.png"><blockquote>
+<p>&emsp;&emsp;如下图，Java堆从GC角度细分为：<strong>新生代区</strong>（Eden区、SurvivorFrom区、SurvivorTo区）和<strong>老年代区</strong><br><img src="/2020/10/12/JVM/2020-10-14-15-25-06.png"></p>
+</blockquote>
 </li>
 </ul>
-
+</li>
+<li>*注意<strong>：图中</strong>新生代区<strong>堆空间占堆中1/3，其中,Eden、From、To区占比例为</strong>8:1:1**；老年代堆空间占2/3。<br>&emsp;&emsp;<br>（自己画的丑图）<br><img src="/2020/10/12/JVM/2020-10-14-15-00-18.png"><br><img src="/2020/10/12/JVM/2020-10-14-15-45-32.png"></li>
+<li>*两张图一起解释**：<blockquote>
+<ul>
+<li>当对象快占满伊甸园区（Eden）时，会发生YGC（也可以叫YoungGC/轻量级GC/Minor GC）操作，Eden区基本清空</li>
+<li>Eden发生YGC之后的剩余对象移至幸存者0（SurvivorFrom/S0）区</li>
+<li>当Eden再次触发GC时，会对<strong>Eden区和From区</strong>进行YGC，这次回收之后还存活的对象直接复制到<strong>To区</strong>（如果有对象的年龄已经达到老年的标准，复制到养老区），同时将这些对象的<strong>年龄+1</strong></li>
+<li><strong>清空Eden和From区</strong>，这就是GC之后有交换，谁空谁是To</li>
+<li><strong>To和From区进行交换</strong>，原来的To成为下一次GC时的From区。部分对象会在From和To区中复制来复制去，如此交换15次（由JVM参数书MaxTenuringThreshold决定，这个参数默认是15），最终如果还是存活，就存入养老区  </li>
+</ul>
+</blockquote>
+</li>
+</ul>
+<p><strong><em>一个对象的这一辈子</em></strong><font color="darkgray">（摘自CSDN：<a target="_blank" rel="noopener" href="https://blog.csdn.net/u012799221/article/details/73180509">JVM内存结构</a>）</font> ：</p>
+<blockquote>
+<p><font color="gray">&emsp;&emsp;我是一个普通的Java对象，我出生在Eden区，在Eden区我还看到和我长的很像的小兄弟，我们在Eden区中玩了挺长时间。有一天Eden区中的人实在是太多了，我就被迫去了Survivor区的“From”区，自从去了Survivor区，我就开始漂了，有时候在Survivor的“From”区，有时候在Survivor的“To”区，居无定所。直到我18岁的时候，爸爸说我成人了，该去社会上闯闯了。于是我就去了年老代那边，年老代里，人很多，并且年龄都挺大的，我在这里也认识了很多人。在年老代里，我生活了20年(每次GC加一岁)，然后被回收。</font></p>
+</blockquote>
+<blockquote>
+<p><img src="/2020/10/12/JVM/2020-10-14-16-42-01.png"></p>
+<ul>
+<li>临时对象意思是在新生代区生和死的对象</li>
+</ul>
+</blockquote>
+<blockquote>
+<p><img src="/2020/10/12/JVM/2020-10-14-16-42-09.png"></p>
+<ul>
+<li>（再记一遍）堆 逻辑上由“新生+养老+元空间”三个部分组成，物理上由“新生+养老”两个部分组成，元空间也叫方法区</li>
+</ul>
+</blockquote>
+<blockquote>
+<p><img src="/2020/10/12/JVM/2020-10-14-17-09-36.png"></p>
+<ul>
+<li>永久代（方法区）几乎不存在GC，里面存放的都是加载的rt.jar等，可以随时用</li>
+</ul>
+</blockquote>
+<h2 id="堆参数调优"><a href="#堆参数调优" class="headerlink" title="堆参数调优"></a>堆参数调优</h2><p><img src="/2020/10/12/JVM/2020-10-14-17-18-23.png"></p>
+<p><img src="/2020/10/12/JVM/2020-10-14-17-19-32.png"></p>
+<blockquote>
+<p>&emsp;&emsp;在Java8中，永久代已经被移除，被一个称为元空间的区域所取代。元空间的本质和永久代类似。<br>&emsp;&emsp;元空间和永久代的最大区别在于：<br>永久代使用的JVM的<strong>堆内存</strong>，但是java8以后的元空间不再使用虚拟机而是使用<strong>本机物理内存</strong>。<br>&emsp;&emsp;因此，默认情况下，元空间的大小仅受本地内存限制。类的元数据放入native memory，字符串池和类的静态变量放入java堆中，这样可以加载多少类的元数据就不再由MaxPermSize控制，而由系统的实际可用空间来控制。</p>
+</blockquote>
+<h3 id="堆内存调优"><a href="#堆内存调优" class="headerlink" title="堆内存调优"></a>堆内存调优</h3><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>-Xms</td>
+<td>设置初始分配大小，默认为物理内存的“1/64”</td>
+</tr>
+<tr>
+<td>-Xms</td>
+<td>最大分配内存，默认为物理内存的“1/4”</td>
+</tr>
+<tr>
+<td>-XX:+PrintGCDetails</td>
+<td>输出详细的GC处理日志</td>
+</tr>
+</tbody></table>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//查看CPU核数</span></span><br><span class="line">System.out.println(Runtime.getRuntime().availableProcessors());</span><br><span class="line"><span class="comment">//返回Java虚拟机试图使用的最大内存量</span></span><br><span class="line"><span class="keyword">long</span> maxMemory = Runtime.getRuntime().maxMemory();</span><br><span class="line">System.out.println(<span class="string">&quot;MAX_MEMORY = &quot;</span> + maxMemory + <span class="string">&quot;(字节)、&quot;</span> + (maxMemory / (<span class="keyword">double</span>)<span class="number">1024</span> / <span class="number">1024</span>) + <span class="string">&quot;MB&quot;</span>);</span><br><span class="line"><span class="comment">//返回Java虚拟机中的内存总量</span></span><br><span class="line"><span class="keyword">long</span> totalMemory = Runtime.getRuntime().totalMemory();</span><br><span class="line">System.out.println(<span class="string">&quot;TOTAL_MEMORY = &quot;</span> + totalMemory + <span class="string">&quot;(字节)、&quot;</span> + (totalMemory / (<span class="keyword">double</span>)<span class="number">1024</span> / <span class="number">1024</span>) + <span class="string">&quot;MB&quot;</span>);</span><br></pre></td></tr></table></figure>
       
     </div>
 
