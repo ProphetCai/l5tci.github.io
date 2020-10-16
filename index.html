@@ -176,7 +176,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-10-15 17:26:58" itemprop="dateModified" datetime="2020-10-15T17:26:58+08:00">2020-10-15</time>
+                <time title="修改时间：2020-10-16 18:01:34" itemprop="dateModified" datetime="2020-10-16T18:01:34+08:00">2020-10-16</time>
               </span>
 
           
@@ -194,7 +194,7 @@
 <p>转载请注明出处：<a href="https://prophetcai.github.io/2020/10/12/JVM/">https://prophetcai.github.io/2020/10/12/JVM/</a></p>
 </blockquote>
 <blockquote>
-<p>看的尚硅谷周阳老师JVM的学习笔记，某些地方参考了<a herf="https://www.jianshu.com/p/9e6841a895b4">简书老哥@Be_The_Minority的文章</a></p>
+<p>看的尚硅谷周阳老师JVM的学习笔记，某些地方参考了<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/9e6841a895b4">简书老哥@Be_The_Minority的文章</a>、以及牛客专刊<a target="_blank" rel="noopener" href="https://www.nowcoder.com/tutorial/10014/index">Java开发岗高频面试题全解析</a>。</p>
 </blockquote>
 <hr>
 <h1 id="JVM"><a href="#JVM" class="headerlink" title="JVM"></a>JVM</h1><h2 id="JVM的体系结构"><a href="#JVM的体系结构" class="headerlink" title="JVM的体系结构"></a>JVM的体系结构</h2><p><img src="/2020/10/12/JVM/2020-10-09-10-11-21.png"><br>&emsp;&emsp;JVM是运行在操作系统之上的，与硬件没有直接的交互</p>
@@ -389,8 +389,88 @@
 </li>
 </ul>
 </blockquote>
-<h3 id="GC四大算法"><a href="#GC四大算法" class="headerlink" title="GC四大算法"></a>GC四大算法</h3><ul>
-<li>1.引用计数法（基本不用了）<br>&emsp;&emsp;</li>
+<h3 id="JVM判断Java对象是否存活"><a href="#JVM判断Java对象是否存活" class="headerlink" title="JVM判断Java对象是否存活"></a>JVM判断Java对象是否存活</h3><p><strong><font color="red">判断一个对象是否应该被回收，主要判断其是否还有引用。</font></strong></p>
+<ul>
+<li><p>1.<strong>引用计数法（基本不用了）</strong></p>
+<ul>
+<li><strong>描述</strong>：给Java对象添加一个引用计数器。每当一个地方引用它时，计数器+1；引用失效则-1。</li>
+<li><strong>判断标准</strong>：当计数器不为0时，判断对象存活；计数器为0时判断死亡。</li>
+<li><strong>优点</strong>：实现简单、效率高。</li>
+<li><strong>缺点</strong>：<strong>不能解决循环引用问题</strong>，存在严重的判断逻辑漏洞，所以JDK1.1之后就没有采用这种算法了。<br>&emsp;比如：<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&lt;-- 背景 --&gt;</span><br><span class="line"><span class="comment">// 对象objA 和 objB 都有字段 name</span></span><br><span class="line"><span class="comment">// 两个对象相互进行引用，除此之外这两个人对象没有任何引用</span></span><br><span class="line">objA.name = objB；</span><br><span class="line">objB.name = objA；</span><br><span class="line"> </span><br><span class="line">&lt;-- 问题 --&gt;</span><br><span class="line"><span class="comment">// 实际上这两个对象已经不可能再被访问，应该要被垃圾收集器进行回收</span></span><br><span class="line"><span class="comment">// 但因为他们相互引用，所以导致计数器不为0，这导致引用计数算法无法通知垃圾收集器回收该两个对象</span></span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p>2.<strong>root根搜索/可行性分析</strong></p>
+<ul>
+<li><p><strong>思路</strong>：<br>&emsp;&emsp;通过一系列称为“GC Roots”的对象作为起始点，从这个节点向下搜索，搜所走过的路径就是引用链（ReferenceChain），当一个对象到GC Roots没有任何引用链相连，也就是GC Roots到这个对象不可达，则这个对象可以被回收。</p>
+</li>
+<li><p><strong>可作为GC Roots的对象有</strong>：</p>
+<ul>
+<li>虚拟机栈（栈帧中的本地变量表）中的引用对象；</li>
+<li>方法区域中的<strong>静态属性</strong>引用的对象；</li>
+<li>方法区域中<strong>常量</strong>引用的对象；</li>
+<li>方法栈中JNI（Java Native Interface）的引用的对象。</li>
+</ul>
+<p><img src="/2020/10/12/JVM/2020-10-16-13-57-59.png"></p>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="GC四大算法"><a href="#GC四大算法" class="headerlink" title="GC四大算法"></a>GC四大算法</h3><h4 id="1-复制算法（Copying）"><a href="#1-复制算法（Copying）" class="headerlink" title="1.复制算法（Copying）"></a>1.复制算法（Copying）</h4><ul>
+<li><font color="red">年轻代</font>中使用的是Minor GC，这种GC算法采用的是复制算法</li>
+<li>原理：<ul>
+<li>从根集合（GC Root）开始，通过遍历（Tracing）从From中找到存活对象，拷贝到To；</li>
+<li>From、To交换身份，下次内存分配从To开始。  </li>
+</ul>
+</li>
+</ul>
+<p><img src="/2020/10/12/JVM/2020-10-16-14-57-59.png"></p>
+<ul>
+<li><p>Minor GC会把Eden中的所有活的对象都移到Survivor区域中，如果Survivor区中放不下，那么剩下的活的对象就被移到Old  generation中，<font color="red">也即一旦收集后，Eden是就变成空的了</font>。</p>
+</li>
+<li><p>当对象在 Eden ( 包括一个 Survivor 区域，这里假设是 from 区域 ) 出生后，在经过一次 Minor GC 后，如果对象还存活，并且能够被另外一块 Survivor 区域所容纳( 上面已经假设为 from 区域，这里应为 to 区域，即 to 区域有足够的内存空间来存储 Eden 和 from 区域中存活的对象 )，则使用复制算法将这些仍然还存活的对象复制到另外一块 Survivor 区域 ( 即 to 区域 ) 中，然后清理所使用过的 Eden 以及 Survivor 区域 ( 即 from 区域 )，并且将这些对象的年龄设置为1，以后对象在 Survivor 区每熬过一次 Minor GC，就将对象的年龄 + 1，当对象的年龄达到某个值时 ( 默认是 15 岁，通过-XX:MaxTenuringThreshold 来设定参数)，这些对象就会成为老年代。</p>
+</li>
+<li><p><strong>-XX:MaxTenuringThreshold</strong> — 设置对象在新生代中存活的次数</p>
+</li>
+<li><p><strong>优点</strong>：算法每次只处理正在使用中的对象，因此<strong>复制成本比较小</strong>，同时<strong>不会产生内存碎片</strong>。</p>
+</li>
+<li><p><strong>缺点</strong>：</p>
+<ul>
+<li><strong>浪费一半的内存</strong>；</li>
+<li><strong>如果存活对象增多的话，复制算法的效率会大大降低</strong>。如果对象的存活率很高，我们可以极端一点，假设是100%存活，那么我们需要将所有对象都复制一遍，并将所有引用地址重置一遍。复制这一工作所花费的时间，在对象存活率达到一定程度时，将会变的不可忽视。 所以从以上描述不难看出，复制算法要想使用，最起码对象的存活率要非常低才行，而且最重要的是，我们必须要克服50%内存的浪费。</li>
+</ul>
+</li>
+</ul>
+<p><img src="/2020/10/12/JVM/2020-10-16-14-48-12.png"><br><img src="/2020/10/12/JVM/2020-10-16-14-07-23.png"></p>
+<h4 id="2-标记-清除算法（Mark-Sweep）"><a href="#2-标记-清除算法（Mark-Sweep）" class="headerlink" title="2.标记-清除算法（Mark-Sweep）"></a>2.标记-清除算法（Mark-Sweep）</h4><p><img src="/2020/10/12/JVM/2020-10-16-14-07-11.png"></p>
+<h4 id="3-标记-压缩（也可叫“标记-整理”Mark-Compact）"><a href="#3-标记-压缩（也可叫“标记-整理”Mark-Compact）" class="headerlink" title="3.标记-压缩（也可叫“标记-整理”Mark-Compact）"></a>3.标记-压缩（<font color="darkgray">也可叫“标记-整理”</font>Mark-Compact）</h4><p><img src="/2020/10/12/JVM/2020-10-16-14-10-47.png"></p>
+<h4 id="4-分代收集算法"><a href="#4-分代收集算法" class="headerlink" title="4.分代收集算法"></a>4.分代收集算法</h4><h2 id="JMM（Java内存模型）"><a href="#JMM（Java内存模型）" class="headerlink" title="JMM（Java内存模型）"></a>JMM（Java内存模型）</h2><blockquote>
+<p>volatile是Java虚拟机提供的轻量级同步机制</p>
+<ul>
+<li>保证可见性；</li>
+<li>不保证原子性；</li>
+<li>禁止指令重排</li>
+</ul>
+</blockquote>
+<ul>
+<li><p><strong>JMM是啥？</strong><br>&emsp;&emsp;<strong>JMM</strong>（Java内存模型Java Memory Model，简称JMM）本很是一种抽象的概念<font color="red">并不真实存在</font>，它描述的是一组规则或规范，通过这组规范定义了程序中各个变量（包括实例字段、静态字段和构成数组对象的元素）的访问方式。</p>
+</li>
+<li><p><strong>JMM关于同步的规定</strong>：</p>
+<ul>
+<li>1.线程<em>解锁</em>前，必须把共享变量的值刷新回主内存；</li>
+<li>2.线程<em>加锁</em>前，必须读取主内存的最新值到自己的工作内存；</li>
+<li>3.加锁解锁都是同一把锁<br>&emsp;&emsp;<blockquote>
+<p>&emsp;&emsp;由于JVM运行程序的实体是线程，而每个线程创建时JVM都会为其创建一个工作内存(有些地方成为栈空间)，工作内存是每个线程的<strong>私有数据区域</strong>，而Java内存模型中规定所有变量都存储在<strong>主内存</strong>，主内存是共享内存区域，所有线程都可以访问，<font color="red">但线程对变量的操作(读取赋值等)必须在工作内存中进行，首先要将变量从主内存拷贝到线程自己的工作内存空间，然后对变量进行操作，操作完成后再将变量写回主内存</font>，不能直接操作主内存中的变量，各个线程中的工作内存中存储着主内存中的<font color="blue">变量副本拷贝</font>，因此不同的线程间无法访问对方的工作内存，线程间的通信(传值)必须通过主内存完成，其简要访问如下图：<br><img src="/2020/10/12/JVM/2020-10-16-17-38-32.png"></p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li><p><strong>JMM的特点</strong>：</p>
+<ul>
+<li>可见性；</li>
+<li>原子性；</li>
+<li>有序性</li>
+</ul>
+</li>
 </ul>
 
       
