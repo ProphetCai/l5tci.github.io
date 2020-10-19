@@ -176,7 +176,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2020-10-16 18:01:34" itemprop="dateModified" datetime="2020-10-16T18:01:34+08:00">2020-10-16</time>
+                <time title="修改时间：2020-10-19 10:31:43" itemprop="dateModified" datetime="2020-10-19T10:31:43+08:00">2020-10-19</time>
               </span>
 
           
@@ -441,9 +441,40 @@
 </li>
 </ul>
 <p><img src="/2020/10/12/JVM/2020-10-16-14-48-12.png"><br><img src="/2020/10/12/JVM/2020-10-16-14-07-23.png"></p>
-<h4 id="2-标记-清除算法（Mark-Sweep）"><a href="#2-标记-清除算法（Mark-Sweep）" class="headerlink" title="2.标记-清除算法（Mark-Sweep）"></a>2.标记-清除算法（Mark-Sweep）</h4><p><img src="/2020/10/12/JVM/2020-10-16-14-07-11.png"></p>
-<h4 id="3-标记-压缩（也可叫“标记-整理”Mark-Compact）"><a href="#3-标记-压缩（也可叫“标记-整理”Mark-Compact）" class="headerlink" title="3.标记-压缩（也可叫“标记-整理”Mark-Compact）"></a>3.标记-压缩（<font color="darkgray">也可叫“标记-整理”</font>Mark-Compact）</h4><p><img src="/2020/10/12/JVM/2020-10-16-14-10-47.png"></p>
-<h4 id="4-分代收集算法"><a href="#4-分代收集算法" class="headerlink" title="4.分代收集算法"></a>4.分代收集算法</h4><h2 id="JMM（Java内存模型）"><a href="#JMM（Java内存模型）" class="headerlink" title="JMM（Java内存模型）"></a>JMM（Java内存模型）</h2><blockquote>
+<h4 id="2-标记-清除算法（Mark-Sweep）"><a href="#2-标记-清除算法（Mark-Sweep）" class="headerlink" title="2.标记-清除算法（Mark-Sweep）"></a>2.标记-清除算法（Mark-Sweep）</h4><p>&emsp;&emsp;<strong>复制算法是用在新生代的，老年代一般由标记清除或标记清除与标记压缩的混合实现</strong>。  </p>
+<ul>
+<li><p>标记清除算法分成<strong>标记</strong>和<strong>清除</strong>两个阶段：先标记出要回收的对象，然后统一回收这些对象。</p>
+<ul>
+<li><strong>标记</strong>：从引用根节点开始标记遍历所有的GC Roots，先标记出要回收的对象。</li>
+<li><strong>清除</strong>：遍历整个堆，把标记的对象清除。</li>
+</ul>
+</li>
+<li><p><strong>优点</strong>：不需要额外空间；</p>
+</li>
+<li><p><strong>缺点</strong>：</p>
+<ul>
+<li>会进行两次扫描，并且此算法需要暂停整个应用，耗时严重；</li>
+<li>会产生内存碎片。<br><img src="/2020/10/12/JVM/2020-10-16-14-07-11.png"></li>
+</ul>
+</li>
+<li><p><strong>标记清除算法小结</strong>：</p>
+<ul>
+<li>1.首先，它的缺点就是效率比较低（递归与全堆对象遍历），而且在进行GC的时候，需要停止应用程序，这会导致用户体验非常差劲</li>
+<li>2.其次，主要的缺点则是这种方式清理出来的空闲内存是不连续的，这点不难理解，我们的死亡对象都是随即的出现在内存的各个角落的，现在把它们清除之后，内存的布局自然会乱七八糟。而为了应付这一点，JVM就不得不维持一个内存的空闲列表，这又是一种开销。而且在分配数组对象的时候，寻找连续的内存空间会不太好找。</li>
+</ul>
+</li>
+</ul>
+<h4 id="3-标记-压缩（也可叫“标记-整理”Mark-Compact）"><a href="#3-标记-压缩（也可叫“标记-整理”Mark-Compact）" class="headerlink" title="3.标记-压缩（也可叫“标记-整理”Mark-Compact）"></a>3.标记-压缩（<font color="darkgray">也可叫“标记-整理”</font>Mark-Compact）</h4><ul>
+<li><strong>原理</strong>直接上图：<br><img src="/2020/10/12/JVM/2020-10-19-10-11-11.png"></li>
+<li><strong>优点</strong>：没有内存碎片，可以利用bump-the-pointer；</li>
+<li>**需要移动对象的成本。<br><img src="/2020/10/12/JVM/2020-10-16-14-10-47.png"></li>
+</ul>
+<p><strong>标记清除压缩（Mark-Sweep-Compact）</strong><br><img src="/2020/10/12/JVM/2020-10-19-10-16-03.png"></p>
+<ul>
+<li>优点：减少移动对象的成本。</li>
+</ul>
+<h4 id="4-分代收集算法"><a href="#4-分代收集算法" class="headerlink" title="4.分代收集算法"></a>4.分代收集算法</h4><p>&emsp;&emsp;根据对象活动周期的不同将内存划分为几块，一般是把Java堆分为新生代和老年代，然后根据各个年代的特点采用适当的收集算法。<br>&emsp;&emsp;在新生代中，每次垃圾收集都发现有大量对象死去，只有少量存活，就选用复制算法，而老年代因为对象存活率高，没有额外空间对它进行分配担保，就必须使用“标记清除”或“标记整理”算法来进行回收。<br><img src="/2020/10/12/JVM/2020-10-19-10-31-39.png"></p>
+<h2 id="JMM（Java内存模型）"><a href="#JMM（Java内存模型）" class="headerlink" title="JMM（Java内存模型）"></a>JMM（Java内存模型）</h2><blockquote>
 <p>volatile是Java虚拟机提供的轻量级同步机制</p>
 <ul>
 <li>保证可见性；</li>
@@ -459,17 +490,33 @@
 <li>1.线程<em>解锁</em>前，必须把共享变量的值刷新回主内存；</li>
 <li>2.线程<em>加锁</em>前，必须读取主内存的最新值到自己的工作内存；</li>
 <li>3.加锁解锁都是同一把锁<br>&emsp;&emsp;<blockquote>
-<p>&emsp;&emsp;由于JVM运行程序的实体是线程，而每个线程创建时JVM都会为其创建一个工作内存(有些地方成为栈空间)，工作内存是每个线程的<strong>私有数据区域</strong>，而Java内存模型中规定所有变量都存储在<strong>主内存</strong>，主内存是共享内存区域，所有线程都可以访问，<font color="red">但线程对变量的操作(读取赋值等)必须在工作内存中进行，首先要将变量从主内存拷贝到线程自己的工作内存空间，然后对变量进行操作，操作完成后再将变量写回主内存</font>，不能直接操作主内存中的变量，各个线程中的工作内存中存储着主内存中的<font color="blue">变量副本拷贝</font>，因此不同的线程间无法访问对方的工作内存，线程间的通信(传值)必须通过主内存完成，其简要访问如下图：<br><img src="/2020/10/12/JVM/2020-10-16-17-38-32.png"></p>
+<p>&emsp;&emsp;由于JVM运行程序的实体是线程，而每个线程创建时JVM都会为其创建一个工作内存(有些地方成为栈空间)，工作内存是每个线程的<strong>私有数据区域</strong>，而Java内存模型中规定所有变量都存储在<strong>主内存</strong>，主内存是共享内存区域，所有线程都可以访问，<font color="red">但线程对变量的操作(读取赋值等)必须在工作内存中进行，首先要将变量从主内存拷贝到线程自己的工作内存空间，然后对变量进行操作，操作完成后再将变量写回主内存</font>，不能直接操作主内存中的变量，各个线程中的工作内存中存储着主内存中的<font color="blue">变量副本拷贝</font>，因此<strong>不同的线程间无法访问对方的工作内存</strong>，线程间的通信(传值)必须通过主内存完成，其简要访问如下图：<br><img src="/2020/10/12/JVM/2020-10-16-17-38-32.png"></p>
 </blockquote>
 </li>
 </ul>
 </li>
 <li><p><strong>JMM的特点</strong>：</p>
 <ul>
-<li>可见性；</li>
+<li>可见性（通知机制）；</li>
 <li>原子性；</li>
 <li>有序性</li>
 </ul>
+</li>
+</ul>
+<p><strong>例子</strong>：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyNumber</span></span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * volatile保证可见性</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">int</span> number = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">add</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.number = <span class="number">105</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Jmm</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        MyNumber myNumber = <span class="keyword">new</span> MyNumber();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">            System.out.println(<span class="string">&quot;**************Come in:&quot;</span>);</span><br><span class="line">            <span class="keyword">try</span>&#123;</span><br><span class="line">                <span class="comment">//暂停3秒钟这个线程</span></span><br><span class="line">                Thread.sleep(<span class="number">3000</span>);</span><br><span class="line">            &#125;<span class="keyword">catch</span> (InterruptedException e)&#123;</span><br><span class="line">                e.printStackTrace();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//将0修改为105</span></span><br><span class="line">            myNumber.add();</span><br><span class="line">            System.out.println(Thread.currentThread().getName() + <span class="string">&quot;\t A update number,number value: &quot;</span> + myNumber.number);</span><br><span class="line">        &#125;,<span class="string">&quot;AAAA&quot;</span>).start();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">while</span> (myNumber.number == <span class="number">0</span>)&#123;</span><br><span class="line">            <span class="comment">//需要有一种通知机制告诉main线程，number已经修改为105，跳出while</span></span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(Thread.currentThread().getName() + <span class="string">&quot;\t mission is over&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="题外话"><a href="#题外话" class="headerlink" title="题外话"></a>题外话</h2><ul>
+<li><p>JVM语法规定：</p>
+<p>静态代码块&gt;构造块&gt;构造方法</p>
+<blockquote>
+<p>所有加载，先加载<strong>静态代码块</strong>，并且只加载一次；</p>
+<p>为什么？</p>
+<blockquote>
+<p>静态的东西加载到方法区，方法区放的是“模板”，而要想有实例，需要先有加载好的“模板”。而“模板”只有一份，所以静态的东西只加载一次。</p>
+<p>main方法虽然是一切程序的入口，main方法入栈，必须先要有.class文件。</p>
+</blockquote>
+</blockquote>
 </li>
 </ul>
 
